@@ -1,13 +1,11 @@
+import multiprocessing
 from multiprocessing import Pool
+from passlib.hash import md5_crypt
+import time
+import math
 
-alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
-threads = len(alphabet)
 salt = "9mjD5ht1" # given salt
 expected = "ro2ITHJjiBpTyfjYRYn2R" # expected hash
-
-def init(data):
-    global shared_data
-    shared_data = data
 
 def check(results):
     for result in results:
@@ -24,11 +22,8 @@ def combos(list1, list2):
             result.append(i + j)
     return result
 
-def partition(combos):
-    if(len(combos) % threads != 0):
-        exit("Error: Number of combinations is not divisible by number of threads.")
-
-    factor = len(combos) / threads
+def partition(combos, threads):
+    factor = math.ceil(len(combos) / threads)
     lower = 0
     upper = factor
     partitions = []
@@ -40,62 +35,64 @@ def partition(combos):
 
     return partitions
 
-def hash_check(partition):
-    from passlib.hash import md5_crypt
-    global shared_data
-    count = 0
-    for firstHalf in shared_data:
+def hash_check(combos, partition):
+    for firstHalf in combos:
         for secondHalf in partition:
             combo = firstHalf + secondHalf
-            count += 1
-
             result = md5_crypt.hash(combo, salt=salt)
             result_hash = result.split("$")[3]
 
             is_correct_password = result_hash == expected
             if is_correct_password:
                 return combo
-    print(count) 
+            
     return None
 
-def parallelize(combos, partitions):
-    results = []
-    with Pool(threads, initializer=init, initargs=(combos,)) as pool:
-        results = pool.map(hash_check, partitions)
+def parallelize(combos, partitions, processes):
+    args = [(partition, combos) for partition in partitions]
+    with Pool(processes) as pool:
+        results = pool.starmap(hash_check, args)
     return results
 
-emptyCombo = ['']
-oneCombos = alphabet.copy()
-twoCombos = combos(oneCombos, alphabet)
-threeCombos = combos(twoCombos, alphabet)
-
-onePartitions = partition(oneCombos)
-twoPartitions = partition(twoCombos)
-threePartitions = partition(threeCombos)
-
 if __name__ == "__main__":
+    alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+    processes = multiprocessing.cpu_count()
+    start = time.time()
+
+    emptyCombo = ['']
+    oneCombos = alphabet.copy()
+    twoCombos = combos(oneCombos, alphabet)
+    threeCombos = combos(twoCombos, alphabet)
+
+    onePartitions = partition(oneCombos, processes)
+    twoPartitions = partition(twoCombos, processes)
+    threePartitions = partition(threeCombos, processes)
+
     print("Testing 1 character passwords")
-    oneResults = parallelize(emptyCombo, onePartitions)
+    oneResults = parallelize(emptyCombo, onePartitions, processes)
     check(oneResults)
 
     print("Testing 2 character passwords")
-    twoResults = parallelize(emptyCombo, twoPartitions)
+    twoResults = parallelize(emptyCombo, twoPartitions, processes)
     check(twoResults)
 
     print("Testing 3 character passwords")
-    threeResults = parallelize(emptyCombo, threePartitions)
+    threeResults = parallelize(emptyCombo, threePartitions, processes)
     check(threeResults)
 
+    print(time.time() - start)
+    exit(0)
+
     print("Testing 4 character passwords")
-    fourResults = parallelize(oneCombos, threePartitions)
+    fourResults = parallelize(oneCombos, threePartitions, processes)
     check(fourResults)
-    
+
     print("Testing 5 character passwords")
-    fiveResults = parallelize(twoCombos, threePartitions)
+    fiveResults = parallelize(twoCombos, threePartitions, processes)
     check(fiveResults)
 
     print("Testing 6 character passwords")
-    sixResults = parallelize(threeCombos, threePartitions)
+    sixResults = parallelize(threeCombos, threePartitions, processes)
     check(sixResults)
 
     print("Password not found")
