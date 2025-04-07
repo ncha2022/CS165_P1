@@ -57,7 +57,6 @@ def parallelize(combos, partitions, processes):
 if __name__ == "__main__":
     alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
     processes = multiprocessing.cpu_count()
-    # start = time.time()
 
     emptyCombo = ['']
     oneCombos = alphabet.copy()
@@ -68,6 +67,7 @@ if __name__ == "__main__":
     twoPartitions = partition(twoCombos, processes)
     threePartitions = partition(threeCombos, processes)
 
+    start = time.time()
     print("Testing 1 character passwords")
     oneResults = parallelize(emptyCombo, onePartitions, processes)
     check(oneResults)
@@ -84,15 +84,13 @@ if __name__ == "__main__":
     fourResults = parallelize(oneCombos, threePartitions, processes)
     check(fourResults)
 
-    # print(time.time() - start)
-    # exit(0)
-
     print("Testing 5 character passwords")
     fiveResults = parallelize(twoCombos, threePartitions, processes)
     check(fiveResults)
 
     print("Testing 6 character passwords")
     sixResults = parallelize(threeCombos, threePartitions, processes)
+    print(f"Runtime: {time.time() - start} seconds" )
     check(sixResults)
 
     print("Password not found")
