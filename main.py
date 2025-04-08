@@ -5,7 +5,7 @@ import time
 import math
 
 salt = "9mjD5ht1" # given salt
-expected = "ro2ITHJjiBpTyfjYRYn2R" # expected hash
+expected = "ro2ITHJjiBpTyfjYRYn2R." # expected hash
 
 def check(results):
     for result in results:
@@ -36,17 +36,19 @@ def partition(combos, threads):
     return partitions
 
 def hash_check(combos, partition):
+    correct = None
     for firstHalf in combos:
         for secondHalf in partition:
             combo = firstHalf + secondHalf
+            #print(combo)
             result = md5_crypt.hash(combo, salt=salt)
             result_hash = result.split("$")[3]
 
             is_correct_password = result_hash == expected
             if is_correct_password:
-                return combo
+                correct = combo
             
-    return None
+    return correct
 
 def parallelize(combos, partitions, processes):
     args = [(partition, combos) for partition in partitions]
